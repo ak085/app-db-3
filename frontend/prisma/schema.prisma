@@ -1,0 +1,60 @@
+// Storage App - Prisma Schema
+// Database: PostgreSQL (Configuration)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MQTT Configuration
+// ============================================
+
+model MqttConfig {
+  id                Int       @id @default(1)
+
+  // Connection
+  broker            String    @default("")
+  port              Int       @default(1883)
+  clientId          String    @default("storage_telegraf")
+  username          String    @default("")
+  password          String    @default("")
+  keepAlive         Int       @default(60)
+
+  // TLS/Security
+  tlsEnabled        Boolean   @default(false)
+  tlsInsecure       Boolean   @default(false)
+  caCertPath        String?
+
+  // Topic subscription
+  topicPatterns     String[]  @default(["bacnet/#"])
+  qos               Int       @default(1)
+
+  // Status
+  enabled           Boolean   @default(true)
+  lastConnected     DateTime?
+  connectionStatus  String    @default("disconnected")
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// ============================================
+// System Settings
+// ============================================
+
+model SystemSettings {
+  id                Int       @id @default(1)
+
+  // System
+  timezone          String    @default("Asia/Kuala_Lumpur")
+  retentionDays     Int       @default(30)
+
+  // Timestamps
+  updatedAt         DateTime  @updatedAt
+}

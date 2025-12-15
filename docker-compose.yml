@@ -1,0 +1,100 @@
+services:
+  # Configuration Database (PostgreSQL)
+  postgres:
+    image: postgres:15
+    container_name: storage-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-storage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-storage123}
+      POSTGRES_DB: ${POSTGRES_DB:-storage_config}
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-storage} -d ${POSTGRES_DB:-storage_config}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Time-Series Database (TimescaleDB)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: storage-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${TIMESCALE_USER:-timescale}
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:-timescale123}
+      POSTGRES_DB: ${TIMESCALE_DB:-sensor_data}
+    ports:
+      - "5435:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./timescaledb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TIMESCALE_USER:-timescale} -d ${TIMESCALE_DB:-sensor_data}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Frontend (Next.js)
+  frontend:
+    build: ./frontend
+    container_name: storage-frontend
+    restart: unless-stopped
+    environment:
+      # Config database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-storage}:${POSTGRES_PASSWORD:-storage123}@postgres:5432/${POSTGRES_DB:-storage_config}
+      # TimescaleDB for queries
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: ${TIMESCALE_USER:-timescale}
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-timescale123}
+      TIMESCALE_DB: ${TIMESCALE_DB:-sensor_data}
+      # App settings
+      TZ: ${TZ:-Asia/Kuala_Lumpur}
+    ports:
+      - "3002:3002"
+    volumes:
+      - mqtt_certs:/app/certs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+
+  # Telegraf (MQTT to TimescaleDB)
+  telegraf:
+    build: ./telegraf
+    container_name: storage-telegraf
+    restart: unless-stopped
+    environment:
+      # Config database (to read MQTT settings)
+      CONFIG_DB_HOST: postgres
+      CONFIG_DB_PORT: 5432
+      CONFIG_DB_USER: ${POSTGRES_USER:-storage}
+      CONFIG_DB_PASSWORD: ${POSTGRES_PASSWORD:-storage123}
+      CONFIG_DB_NAME: ${POSTGRES_DB:-storage_config}
+      # TimescaleDB (to write data)
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: ${TIMESCALE_USER:-timescale}
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-timescale123}
+      TIMESCALE_DB: ${TIMESCALE_DB:-sensor_data}
+      # Timezone
+      TZ: ${TZ:-Asia/Kuala_Lumpur}
+    volumes:
+      - mqtt_certs:/app/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  timescaledb_data:
+  mqtt_certs:
