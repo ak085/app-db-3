@@ -53,6 +53,7 @@ interface Toast {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [initialSettings, setInitialSettings] = useState<Settings | null>(null)
   const [certStatus, setCertStatus] = useState<CertificateStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -61,6 +62,10 @@ export default function SettingsPage() {
   const [timezones, setTimezones] = useState<string[]>([])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = settings && initialSettings &&
+    JSON.stringify(settings) !== JSON.stringify(initialSettings)
 
   // Load all IANA timezones
   useEffect(() => {
@@ -74,6 +79,7 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error('Failed to load settings')
       const data = await response.json()
       setSettings(data)
+      setInitialSettings(JSON.parse(JSON.stringify(data))) // Deep copy for comparison
     } catch (error) {
       setToast({
         message: error instanceof Error ? error.message : 'Failed to load settings',
@@ -115,6 +121,7 @@ export default function SettingsPage() {
 
       if (!response.ok) throw new Error('Failed to save settings')
 
+      setInitialSettings(JSON.parse(JSON.stringify(settings))) // Update baseline after save
       setToast({ message: 'Settings saved successfully', type: 'success' })
     } catch (error) {
       setToast({
@@ -257,14 +264,25 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
           <p className="text-slate-600">Configure MQTT connection and data storage</p>
         </div>
-        <button
-          onClick={saveSettings}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
-        >
-          <Save className={`w-4 h-4 ${saving ? 'animate-spin' : ''}`} />
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
+        <div className="flex items-center gap-4">
+          {hasUnsavedChanges && (
+            <span className="text-sm text-amber-600 font-medium bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+              Unsaved changes
+            </span>
+          )}
+          <button
+            onClick={saveSettings}
+            disabled={saving}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
+              hasUnsavedChanges
+                ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            }`}
+          >
+            <Save className={`w-4 h-4 ${saving ? 'animate-spin' : ''}`} />
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -493,23 +511,23 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
               {settings.mqtt.topicPatterns.map((pattern, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg"
+                  className={`flex items-center justify-between py-3 px-4 ${index % 2 === 0 ? 'bg-slate-50' : ''}`}
                 >
                   <code className="text-sm text-slate-700 font-mono">{pattern}</code>
                   <button
                     onClick={() => removeTopicPattern(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 p-1"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
               {settings.mqtt.topicPatterns.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">
+                <p className="text-sm text-slate-500 text-center py-4 px-4">
                   No topics configured. Add a topic pattern to start receiving data.
                 </p>
               )}

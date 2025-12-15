@@ -197,18 +197,18 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+          <div className="space-y-0 border border-slate-200 rounded-lg divide-y divide-slate-200">
+            <div className="flex items-center justify-between py-3 px-4 bg-slate-50">
               <span className="text-slate-600">Broker</span>
               <span className="font-medium">
                 {data?.mqtt.broker || 'Not configured'}
               </span>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <div className="flex items-center justify-between py-3 px-4">
               <span className="text-slate-600">Port</span>
               <span className="font-medium">{data?.mqtt.port}</span>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <div className="flex items-center justify-between py-3 px-4 bg-slate-50">
               <span className="text-slate-600">TLS/SSL</span>
               <span className="flex items-center gap-2">
                 {data?.mqtt.tlsEnabled ? (
@@ -224,13 +224,13 @@ export default function Dashboard() {
                 )}
               </span>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <div className="flex items-center justify-between py-3 px-4">
               <span className="text-slate-600">Enabled</span>
               <span className={`font-medium ${data?.mqtt.enabled ? 'text-emerald-600' : 'text-slate-500'}`}>
                 {data?.mqtt.enabled ? 'Yes' : 'No'}
               </span>
             </div>
-            <div className="flex items-center justify-between py-2">
+            <div className="flex items-center justify-between py-3 px-4 bg-slate-50">
               <span className="text-slate-600">Last Connected</span>
               <span className="text-sm text-slate-500">
                 {formatDate(data?.mqtt.lastConnected || null)}
@@ -246,12 +246,12 @@ export default function Dashboard() {
             <Hash className="w-5 h-5 text-slate-400" />
           </div>
 
-          <div className="space-y-2">
+          <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
             {data?.mqtt.topicPatterns?.length ? (
               data.mqtt.topicPatterns.map((pattern, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 py-2 px-3 bg-slate-50 rounded-lg"
+                  className={`flex items-center gap-2 py-3 px-4 ${index % 2 === 0 ? 'bg-slate-50' : ''}`}
                 >
                   <code className="text-sm text-slate-700 font-mono">
                     {pattern}
@@ -259,11 +259,11 @@ export default function Dashboard() {
                 </div>
               ))
             ) : (
-              <p className="text-slate-500 text-sm">No topics configured</p>
+              <p className="text-slate-500 text-sm py-3 px-4">No topics configured</p>
             )}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-slate-200">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-600">Last Data Received</span>
               <span className="flex items-center gap-2 text-slate-500">
