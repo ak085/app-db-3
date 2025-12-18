@@ -201,6 +201,52 @@ export const config = {
 }
 ```
 
+### 6. Docker Healthcheck Endpoint Blocked by Auth
+
+If your docker-compose uses a healthcheck that calls an API endpoint, that endpoint will now return 401 Unauthorized. Add it to publicPaths in middleware.ts:
+
+```typescript
+const publicPaths = [
+  '/login',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/dashboard/summary',  // Required for Docker healthcheck
+]
+```
+
+### 7. Next.js 15 Binds to Container Hostname (Not localhost)
+
+Next.js 15 standalone mode binds to the container's hostname by default, not `0.0.0.0`. This causes healthchecks using `localhost` to fail with ECONNREFUSED.
+
+**Fix:** Add `HOSTNAME: 0.0.0.0` to your frontend service in docker-compose.yml:
+
+```yaml
+frontend:
+  environment:
+    HOSTNAME: 0.0.0.0  # Required for Next.js 15 to listen on all interfaces
+    # ... other env vars
+```
+
+### 8. Fresh Deployment - Login Returns 500 "System not configured"
+
+On fresh deployments, the `SystemSettings` table is empty (seed doesn't run automatically). Login fails with 500 error.
+
+**Fix:** Modify login route to auto-create default settings:
+
+```typescript
+// In src/app/api/auth/login/route.ts
+let settings = await prisma.systemSettings.findFirst()
+
+if (!settings) {
+  settings = await prisma.systemSettings.create({
+    data: {
+      adminUsername: 'admin',
+      adminPasswordHash: '', // Empty = use default "admin" password
+    }
+  })
+}
+```
+
 ---
 
 ## Integration Steps (Order Matters)
